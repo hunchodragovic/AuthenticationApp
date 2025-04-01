@@ -1,17 +1,30 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+
 const register = async (req, res) => {
   const { name, email, password } = req.body;
+
   if (!name || !email || !password) {
     return res.status(400).json({ message: "All fields are required" });
   }
-  const foundUser = User.findOne({ email }).exec();
+
+  // Check if user already exists
+  const foundUser = await User.findOne({ email }).exec(); // Use await here for async operation
   if (foundUser) {
     return res.status(409).json({ message: "User already exists" });
   }
+
+  // Hash password
   const hashedPassword = await bcrypt.hash(password, 10);
+
+  // Create new user
   const newUser = new User({ name, email, password: hashedPassword });
+
+  // Save user to the database
+  await newUser.save();
+
+  // Generate access token
   const accessToken = jwt.sign(
     {
       UserInfo: {
@@ -23,6 +36,8 @@ const register = async (req, res) => {
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: "15m" }
   );
+
+  // Generate refresh token
   const refreshToken = jwt.sign(
     {
       UserInfo: {
@@ -34,10 +49,24 @@ const register = async (req, res) => {
     process.env.REFRESH_TOKEN_SECRET,
     { expiresIn: "7d" }
   );
+
+  // Set refresh token in HTTP-only cookie
   res.cookie("jwt", refreshToken, {
     httpOnly: true,
-    secure: true,
+    secure: true, // Ensure this is true only if you're using https
     sameSite: "None",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
- 
-});
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
+  // Send the response with accessToken and user data
+  res.json({
+    accessToken,
+    user: {
+      id: newUser._id,
+      name: newUser.name,
+      email: newUser.email,
+    },
+  });
+};
+
+module.exports = register;
