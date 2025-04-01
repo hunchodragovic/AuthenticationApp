@@ -12,4 +12,15 @@ const register = async (req, res) => {
   }
   const hashedPassword = await bcrypt.hash(password, 10);
   const newUser = new User({ name, email, password: hashedPassword });
+  const accessToken = jwt.sign(
+    {
+      UserInfo: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+      },
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "15m" }
+  );
 };
