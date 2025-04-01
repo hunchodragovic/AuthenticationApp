@@ -23,4 +23,21 @@ const register = async (req, res) => {
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: "15m" }
   );
-};
+  const refreshToken = jwt.sign(
+    {
+      UserInfo: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+      },
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    { expiresIn: "7d" }
+  );
+  res.cookie("jwt", refreshToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+ 
+});
