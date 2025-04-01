@@ -68,5 +68,68 @@ const register = async (req, res) => {
     },
   });
 };
+const login = async (req, res) => {
+  const { email, password } = req.body;
 
-module.exports = register;
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
+  }
+
+  // Check if user exists
+  const foundUser = await User.findOne({ email }).exec();
+  if (!foundUser) {
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  // Verify password
+  const passwordMatch = await bcrypt.compare(password, foundUser.password);
+  if (!passwordMatch) {
+    return res.status(401).json({ message: "Invalid credentials" });
+  }
+
+  // Generate access token
+  const accessToken = jwt.sign(
+    {
+      UserInfo: {
+        id: foundUser._id,
+        name: foundUser.name,
+        email: foundUser.email,
+      },
+    },
+    process.env.ACCESS_TOKEN_SECRET,
+    { expiresIn: "15m" }
+  );
+
+  // Generate refresh token
+  const refreshToken = jwt.sign(
+    {
+      UserInfo: {
+        id: foundUser._id,
+        name: foundUser.name,
+        email: foundUser.email,
+      },
+    },
+    process.env.REFRESH_TOKEN_SECRET,
+    { expiresIn: "7d" }
+  );
+
+  // Set refresh token in HTTP-only cookie
+  res.cookie("jwt", refreshToken, {
+    httpOnly: true,
+    secure: true, // Ensure this is true only if you're using HTTPS
+    sameSite: "None",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  });
+
+  // Send the response with accessToken and user data
+  res.json({
+    accessToken,
+    user: {
+      id: foundUser._id,
+      name: foundUser.name,
+      email: foundUser.email,
+    },
+  });
+};
+
+module.exports = { login, register };
