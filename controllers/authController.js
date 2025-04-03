@@ -131,5 +131,45 @@ const login = async (req, res) => {
     },
   });
 };
-const refresh = (req, res) => {};
+
+const refresh = async (req, res) => {
+  const cookies = req.cookies;
+  if (!cookies?.jwt) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  const refreshToken = cookies.jwt;
+
+  jwt.verify(
+    refreshToken,
+    process.env.REFRESH_TOKEN_SECRET,
+    async (err, decoded) => {
+      if (err) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      // Fetch user from DB to ensure they still exist
+      const foundUser = await User.findById(decoded.UserInfo.id).exec();
+      if (!foundUser) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+
+      // Generate new access token
+      const accessToken = jwt.sign(
+        {
+          UserInfo: {
+            id: foundUser._id,
+          },
+        },
+        process.env.ACCESS_TOKEN_SECRET,
+        { expiresIn: "15m" } // Ensure the correct format
+      );
+
+      res.json({ accessToken });
+    }
+  );
+};
+
+module.exports = refresh;
+
 module.exports = { login, register };
