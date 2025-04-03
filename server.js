@@ -24,6 +24,8 @@ app.use(express.static(path.join(__dirname, "public")));
 // Custom routes
 app.use("/", require("./routes/root"));
 app.use("/auth", require("./routes/authRoutes"));
+app.use("/users", require("./routes/userRoutes"));
+
 // 404 handler: This will be executed only if no other routes match
 app.use((req, res) => {
   res.status(404);
