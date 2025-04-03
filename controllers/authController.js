@@ -169,7 +169,16 @@ const refresh = async (req, res) => {
     }
   );
 };
-
-module.exports = refresh;
-
-module.exports = { login, register };
+const logout = async (req, res) => {
+  const cookies = req.cookies;
+  if (!cookies?.jwt) {
+    return res.sendStatus(204); // No content
+  }
+  res.clearCookie("jwt", {
+    httpOnly: true,
+    sameSite: "None",
+    secure: true, // Ensure this is true only if you're using HTTPS
+  });
+  res.json({ message: "Cookie cleared" });
+};
+module.exports = { login, register, refresh };
